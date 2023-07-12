@@ -1,6 +1,9 @@
 const router = require("express").Router();
 const { User, validate } = require("../models/user.js");
 const bcrypt = require("bcrypt");
+const auth = require("../middleware/auth.js");
+const admin = require("../middleware/admin.js");
+const validObjectId = require("../middleware/validObjectId.js");
 
 //route to create a user
 router.post("/", async (req, res) => {
@@ -25,6 +28,34 @@ router.post("/", async (req, res) => {
   res
     .status(200)
     .send({ data: newUser, message: "Account created successfully" });
+});
+
+//route to get all users
+router.get("/", admin, async (req, res) => {
+  const users = await User.find().select("-password-__v");
+  res.status(200).send({ data: users });
+});
+
+//route get user by id
+router.get("/:id", [validObjectId, auth], async (req, res) => {
+  const user = await User.findById(req.params.id).select("-password -__v");
+  res.status(200).send({ data: user });
+});
+
+//route to update user by id
+router.put("/:id", [validObjectId, auth], async (req, res) => {
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    { $set: req.body },
+    { new: true }
+  ).select("-password -__v");
+  res.status(200).send({ data: user });
+});
+
+//delete user by id
+router.delete("/:id", [validObjectId, auth], async (req, res) => {
+  await User.findByIdAndDelete(req.params.id);
+  res.status(200).send({ message: "User Deleted Succsefully" });
 });
 
 module.exports = router;
